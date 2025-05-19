@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
+
+[[bin]]
+name = "rlox"
+path = "src/bin/rlox.rs"
+
+
+[profile.release]
+debug = true
