@@ -79,7 +79,6 @@ impl Scanner {
 
     fn scan_single_token(&mut self) {
         let ch: char = self.advance();
-        println!("{}", ch);
         match ch {
             '(' => self.add_token(TokenType::LeftParen),
             ')' => self.add_token(TokenType::RightParen),
@@ -143,22 +142,25 @@ impl Scanner {
     }
 
     fn number(&mut self) {
+        // Integer part
         while self.peek().is_ascii_digit() {
             self.advance();
         }
 
         // Look for fractional part
-        let mut next_ch = self.peek_next();
-        if self.peek() == '.' && next_ch.is_ascii_digit() {
-            // consume "."
-            self.advance();
-            next_ch = self.peek();
-            while next_ch.is_ascii_digit() {
+        let mut is_float = false;
+        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
+            is_float = true;
+            self.advance(); // consume "."
+            while self.peek_next().is_ascii_digit() {
                 self.advance();
             }
         }
         let val = &self._source[self._start..self._current];
-        let lit = Literal::Float(val.parse().unwrap());
+        let lit = match is_float {
+            true => Literal::Float(val.parse().unwrap()),
+            false => Literal::Integer(val.parse().unwrap()),
+        };
 
         // todo: I assume typecasting should be here??
         self.add_token_with_literal(TokenType::Number, lit);
