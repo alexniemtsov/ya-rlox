@@ -69,8 +69,8 @@ impl Lox {
         //     return Err(err);
         // }
         self.scanner.scan_tokens();
+        println!("Tokens:\n{:#?}", self.scanner.tokens);
 
-        println!("Tokens: {:?}", self.scanner.tokens);
         Ok(())
     }
 }

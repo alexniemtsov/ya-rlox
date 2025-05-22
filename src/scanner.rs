@@ -120,6 +120,7 @@ impl Scanner {
         //todo: match character
     }
 
+    // todo: doesn't work properly. Includes symbols after closed quote
     fn string(&mut self) {
         while self.peek() != '"' && !self.is_eof() {
             if self.peek() == '\n' {
