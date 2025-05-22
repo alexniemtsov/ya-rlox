@@ -1,10 +1,14 @@
 use std::error::Error;
 use std::{env, fmt, fs, io, process};
+
+use ya_rlox::scanner::Scanner;
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
 
     let result = match args.len() {
-        0 => run_prompt(),
+        0 => run_file("test.lox"),
+        // 0 => run_prompt(),
         1 => run_file(&args[0]),
         _ => {
             println!("Usage: jlox [script]");
@@ -48,22 +52,25 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
 }
 
 struct Lox {
-    code: String,
+    scanner: Scanner,
 }
 
 impl Lox {
     fn new(code: String) -> Self {
-        Self { code }
+        Self {
+            scanner: Scanner::new(code),
+        }
     }
 
     fn run(&mut self) -> Result<(), BaseError> {
-        if self.code.trim() == "err" {
-            let err = BaseError::new(1, "test.lox".to_string(), "Simulated error".to_string());
+        // if self.scanner.trim() == "err" {
+        //     let err = BaseError::new(1, "test.lox".to_string(), "Simulated error".to_string());
+        //
+        //     return Err(err);
+        // }
+        self.scanner.scan_tokens();
 
-            return Err(err);
-        }
-
-        println!("Echo: {}", self.code.trim());
+        println!("Tokens: {:?}", self.scanner.tokens);
         Ok(())
     }
 }

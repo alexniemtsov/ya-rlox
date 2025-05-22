@@ -1,20 +1,17 @@
-// todo: Lexical analysis.
-// 1. Take raw source code
-// 2. Group into tokens
-//
-use crate::tokenizer::{Token, TokenType};
+use crate::tokenizer::{Literal, Token, TokenType};
 
-struct Scanner {
+// Scanner reads provided string and returns tokens instead
+pub struct Scanner {
+    pub tokens: Vec<Token>,
+
     _source: String,
-    tokens: Vec<Token>,
-
     _start: usize,
     _current: usize,
     _line: usize,
 }
 
 impl Scanner {
-    fn new(source: String) -> Self {
+    pub fn new(source: String) -> Self {
         Self {
             _source: source,
             tokens: Vec::new(),
@@ -25,7 +22,7 @@ impl Scanner {
         }
     }
 
-    fn scan_tokens(&mut self) {
+    pub fn scan_tokens(&mut self) {
         while !self.is_eof() {
             self._start = self._current;
             self.scan_single_token();
@@ -38,6 +35,11 @@ impl Scanner {
         self.tokens.push(token);
     }
 
+    fn add_token_with_literal(&mut self, type_: TokenType, literal: Literal) {
+        let token = Token::new(type_, String::new(), Some(literal), self._line);
+        self.tokens.push(token);
+    }
+
     fn is_eof(&self) -> bool {
         self._current >= self._source.len()
     }
@@ -47,18 +49,38 @@ impl Scanner {
             return false;
         }
 
-        match self._source.chars().nth(self._current) {
-            Some(c) => {
-                self._current += 1;
-                c == expected
-            }
-            None => false,
+        let next = self._source[self._current..].chars().next().unwrap();
+        if next != expected {
+            return false;
         }
+        self._current += expected.len_utf8();
+        true
+    }
+
+    fn advance(&mut self) -> char {
+        let ch = self._source[self._current..].chars().next().unwrap();
+        self._current += ch.len_utf8();
+        ch
+    }
+
+    fn peek(&self) -> char {
+        if self.is_eof() {
+            return '\0';
+        }
+        self._source[self._current..].chars().next().unwrap()
+    }
+
+    fn peek_next(&self) -> char {
+        if self._current + 1 >= self._source.len() {
+            return '\0';
+        }
+        self._source[self._current + 1..].chars().next().unwrap()
     }
 
     fn scan_single_token(&mut self) {
-        let c: char = self._source.remove(self._current);
-        match c {
+        let ch: char = self.advance();
+        println!("{}", ch);
+        match ch {
             '(' => self.add_token(TokenType::LeftParen),
             ')' => self.add_token(TokenType::RightParen),
             '{' => self.add_token(TokenType::LeftBrace),
@@ -70,29 +92,127 @@ impl Scanner {
             ';' => self.add_token(TokenType::Semicolon),
             '*' => self.add_token(TokenType::Star),
 
-            '!' => self.add_token(if self.match_char('=') {
-                TokenType::BangEqual
-            } else {
-                TokenType::Bang
-            }),
-            '=' => self.add_token(if self.match_char('=') {
-                TokenType::EqualEqual
-            } else {
-                TokenType::Equal
-            }),
-            '<' => self.add_token(if self.match_char('=') {
-                TokenType::LessEqual
-            } else {
-                TokenType::Less
-            }),
-            '>' => self.add_token(if self.match_char('=') {
-                TokenType::GreaterEqual
-            } else {
-                TokenType::Greater
-            }),
+            '!' => self.add_conditional_token('=', TokenType::BangEqual, TokenType::Bang),
+            '=' => self.add_conditional_token('=', TokenType::EqualEqual, TokenType::Equal),
+            '<' => self.add_conditional_token('=', TokenType::LessEqual, TokenType::Less),
+            '>' => self.add_conditional_token('=', TokenType::GreaterEqual, TokenType::Greater),
 
-            _ => println!("Unexpected token: {}", c),
+            // Long lexemes
+            '/' => self.lookahead('/', TokenType::Slash, None),
+            // Ignored
+            ' ' | '\r' | '\t' => {}
+
+            '\n' => {
+                self._line += 1;
+            }
+
+            '"' => self.string(),
+
+            _ => {
+                if ch.is_ascii_digit() {
+                    return self.number();
+                }
+                if ch.is_ascii_alphabetic() || ch == '_' {
+                    return self.identifier();
+                }
+                println!("Unexpected token: {}", ch)
+            }
         };
         //todo: match character
+    }
+
+    fn string(&mut self) {
+        while self.peek() != '"' && !self.is_eof() {
+            if self.peek() == '\n' {
+                self._line += 1;
+            }
+            self.advance();
+        }
+
+        if self.is_eof() {
+            // todo: throw error
+            return;
+        }
+
+        self.advance();
+
+        let val = &self._source[self._start + 1..self._current + 1];
+        let lit = Literal::String(val.to_string());
+
+        self.add_token_with_literal(TokenType::String, lit);
+    }
+
+    fn number(&mut self) {
+        while self.peek().is_ascii_digit() {
+            self.advance();
+        }
+
+        // Look for fractional part
+        let mut next_ch = self.peek_next();
+        if self.peek() == '.' && next_ch.is_ascii_digit() {
+            // consume "."
+            self.advance();
+            next_ch = self.peek();
+            while next_ch.is_ascii_digit() {
+                self.advance();
+            }
+        }
+        let val = &self._source[self._start..self._current];
+        let lit = Literal::Float(val.parse().unwrap());
+
+        // todo: I assume typecasting should be here??
+        self.add_token_with_literal(TokenType::Number, lit);
+    }
+
+    fn identifier(&mut self) {
+        match self.keyword_to_token(&self._source[self._start..self._current]) {
+            Some(t) => self.add_token(t),
+            None => self.add_token(TokenType::Identifier),
+        };
+    }
+
+    fn add_conditional_token(&mut self, expect: char, if_match: TokenType, if_not: TokenType) {
+        let t = if self.match_char(expect) {
+            if_match
+        } else {
+            if_not
+        };
+        self.add_token(t);
+    }
+
+    fn lookahead(&mut self, expect: char, on_found: TokenType, _escape: Option<char>) {
+        let esc = _escape.unwrap_or('\n');
+        let next = self.match_char(expect);
+
+        if next {
+            while self.peek() != esc && !self.is_eof() {
+                self.advance();
+            }
+        } else {
+            self.add_token(on_found);
+        }
+    }
+
+    // Todo: investigate about crate `phf`. Generates static hash maps at compile time.
+    fn keyword_to_token(&self, keyword: &str) -> Option<TokenType> {
+        match keyword {
+            "and" => Some(TokenType::And),
+            "class" => Some(TokenType::Class),
+            "else" => Some(TokenType::Else),
+            "false" => Some(TokenType::False),
+            "for" => Some(TokenType::For),
+            "fun" => Some(TokenType::Fun),
+            "if" => Some(TokenType::If),
+            "nil" => Some(TokenType::If),
+            "while" => Some(TokenType::While),
+            "or" => Some(TokenType::Or),
+            "print" => Some(TokenType::Print),
+            "return" => Some(TokenType::Return),
+            "super" => Some(TokenType::Super),
+            "this" => Some(TokenType::This),
+            "true" => Some(TokenType::True),
+            "var" => Some(TokenType::Var),
+            _ => None,
+        }
     }
 }

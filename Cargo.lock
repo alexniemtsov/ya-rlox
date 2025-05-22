@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "ya-rlox"
+name = "ya_rlox"
 version = "0.1.0"
