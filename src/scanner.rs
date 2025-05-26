@@ -1,6 +1,90 @@
-use crate::tokenizer::{Literal, Token, TokenType};
+// Scanner reads provided string and returns tokens instead.
 
-// Scanner reads provided string and returns tokens instead
+#[derive(Debug)]
+pub enum TokenType {
+    // Single-character tokens
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
+    Comma,
+    Dot,
+    Minus,
+    Plus,
+    Semicolon,
+    Slash,
+    Star,
+
+    // One or two character tokkens
+    Bang,
+    BangEqual,
+    Equal,
+    EqualEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
+
+    // Literals
+    Identifier,
+    String,
+    Number,
+
+    // Keywords
+    And,
+    Class,
+    Else,
+    False,
+    Fun,
+    For,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
+
+    Eof,
+}
+
+// Owns everything.
+#[derive(Debug)]
+pub struct Token {
+    type_: TokenType,
+    lexeme: String,
+    literal: Option<Literal>,
+    line: usize,
+}
+
+#[derive(Debug)]
+pub enum Literal {
+    String(String),
+    Integer(i64),
+    Float(f64),
+}
+
+impl Token {
+    pub fn new(type_: TokenType, lexeme: String, literal: Option<Literal>, line: usize) -> Self {
+        Self {
+            type_,
+            lexeme,
+            literal,
+            line,
+        }
+    }
+
+    fn to_string(&self) -> String {
+        format!(
+            "_T: type={:?} lex={} lit={:?} line={}",
+            &self.type_, self.lexeme, self.literal, self.line
+        )
+    }
+}
+
 pub struct Scanner {
     pub tokens: Vec<Token>,
 
@@ -22,22 +106,29 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) {
+    // Consumes self and return tokens
+    pub fn scan_tokens(mut self) -> Vec<Token> {
         while !self.is_eof() {
             self._start = self._current;
             self.scan_single_token();
         }
         self.add_token(TokenType::Eof);
+        self.tokens
     }
 
     fn add_token(&mut self, type_: TokenType) {
-        let token = Token::new(type_, String::new(), None, self._line);
+        let token = Token::new(type_, self.get_lexeme(), None, self._line);
         self.tokens.push(token);
     }
 
     fn add_token_with_literal(&mut self, type_: TokenType, literal: Literal) {
-        let token = Token::new(type_, String::new(), Some(literal), self._line);
+        let token = Token::new(type_, self.get_lexeme(), Some(literal), self._line);
         self.tokens.push(token);
+    }
+
+    fn get_lexeme(&self) -> String {
+        let text = &self._source[self._start..self._current];
+        text.to_string()
     }
 
     fn is_eof(&self) -> bool {
@@ -168,13 +259,11 @@ impl Scanner {
         while self.peek().is_alphanumeric() {
             self.advance();
         }
-        let val = &self._source[self._start..self._current];
         let token = self.keyword_to_token(&self._source[self._start..self._current]);
 
-        let lit = Literal::String(val.to_string());
         match token {
             Some(t) => self.add_token(t),
-            None => self.add_token_with_literal(TokenType::Identifier, lit),
+            None => self.add_token(TokenType::Identifier),
         };
     }
 

@@ -1,6 +1,7 @@
 use std::error::Error;
-use std::{env, fmt, fs, io, process};
+use std::{env, fmt, fs, process};
 
+use ya_rlox::parser::Parser;
 use ya_rlox::scanner::Scanner;
 
 fn main() {
@@ -25,51 +26,51 @@ fn main() {
 }
 fn run_file(path: &str) -> Result<(), Box<dyn Error>> {
     let source = fs::read_to_string(path)?;
-    let mut lox = Lox::new(source);
+    let lox = Lox::new(source);
     lox.run()?;
 
     Ok(())
 }
 
-fn run_prompt() -> Result<(), Box<dyn Error>> {
-    let s_in = io::stdin();
-    loop {
-        print!("> ");
-        let mut line = String::new();
-        io::Write::flush(&mut io::stdout())?;
-        let bytes_read = s_in.read_line(&mut line)?;
-        if bytes_read == 0 {
-            break; // EOF (Ctrl+D, Ctrl+Z)
-        }
-
-        let mut lox = Lox::new(line);
-        if let Err(e) = lox.run() {
-            eprintln!("Runtime error: {e}")
-        }
-    }
-
-    Ok(())
-}
+// fn run_prompt() -> Result<(), Box<dyn Error>> {
+//     let s_in = io::stdin();
+//     loop {
+//         print!("> ");
+//         let mut line = String::new();
+//         io::Write::flush(&mut io::stdout())?;
+//         let bytes_read = s_in.read_line(&mut line)?;
+//         if bytes_read == 0 {
+//             break; // EOF (Ctrl+D, Ctrl+Z)
+//         }
+//
+//         let lox = Lox::new(line);
+//         if let Err(e) = lox.run() {
+//             eprintln!("Runtime error: {e}")
+//         }
+//     }
+//
+//     Ok(())
+// }
 
 struct Lox {
-    scanner: Scanner,
+    source: String,
 }
 
 impl Lox {
-    fn new(code: String) -> Self {
-        Self {
-            scanner: Scanner::new(code),
-        }
+    fn new(source: String) -> Self {
+        Self { source }
     }
 
-    fn run(&mut self) -> Result<(), BaseError> {
+    fn run(self) -> Result<(), BaseError> {
         // if self.scanner.trim() == "err" {
         //     let err = BaseError::new(1, "test.lox".to_string(), "Simulated error".to_string());
         //
         //     return Err(err);
         // }
-        self.scanner.scan_tokens();
-        println!("Tokens:\n{:#?}", self.scanner.tokens);
+        let tokens = Scanner::new(self.source).scan_tokens();
+        println!("{:#?}", tokens);
+        let ast = Parser::new(tokens).parse();
+        println!("{:#?}", ast);
 
         Ok(())
     }
