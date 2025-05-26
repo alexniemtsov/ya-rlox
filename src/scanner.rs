@@ -120,7 +120,6 @@ impl Scanner {
         //todo: match character
     }
 
-    // todo: doesn't work properly. Includes symbols after closed quote
     fn string(&mut self) {
         while self.peek() != '"' && !self.is_eof() {
             if self.peek() == '\n' {
@@ -134,11 +133,10 @@ impl Scanner {
             return;
         }
 
-        self.advance();
-
-        let val = &self._source[self._start + 1..self._current + 1];
+        let val = &self._source[self._start + 1..self._current];
         let lit = Literal::String(val.to_string());
 
+        self.advance();
         self.add_token_with_literal(TokenType::String, lit);
     }
 
@@ -153,7 +151,7 @@ impl Scanner {
         if self.peek() == '.' && self.peek_next().is_ascii_digit() {
             is_float = true;
             self.advance(); // consume "."
-            while self.peek_next().is_ascii_digit() {
+            while self.peek().is_ascii_digit() {
                 self.advance();
             }
         }
@@ -163,14 +161,20 @@ impl Scanner {
             false => Literal::Integer(val.parse().unwrap()),
         };
 
-        // todo: I assume typecasting should be here??
         self.add_token_with_literal(TokenType::Number, lit);
     }
 
     fn identifier(&mut self) {
-        match self.keyword_to_token(&self._source[self._start..self._current]) {
+        while self.peek().is_alphanumeric() {
+            self.advance();
+        }
+        let val = &self._source[self._start..self._current];
+        let token = self.keyword_to_token(&self._source[self._start..self._current]);
+
+        let lit = Literal::String(val.to_string());
+        match token {
             Some(t) => self.add_token(t),
-            None => self.add_token(TokenType::Identifier),
+            None => self.add_token_with_literal(TokenType::Identifier, lit),
         };
     }
 
@@ -184,6 +188,7 @@ impl Scanner {
     }
 
     fn lookahead(&mut self, expect: char, on_found: TokenType, _escape: Option<char>) {
+        // todo: handle multiline comments /* ... */
         let esc = _escape.unwrap_or('\n');
         let next = self.match_char(expect);
 
