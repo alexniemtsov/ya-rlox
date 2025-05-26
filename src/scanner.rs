@@ -1,6 +1,6 @@
 // Scanner reads provided string and returns tokens instead.
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TokenType {
     // Single-character tokens
     LeftParen,
@@ -54,7 +54,7 @@ pub enum TokenType {
 // Owns everything.
 #[derive(Debug)]
 pub struct Token {
-    type_: TokenType,
+    pub type_: TokenType,
     lexeme: String,
     literal: Option<Literal>,
     line: usize,
@@ -107,6 +107,7 @@ impl Scanner {
     }
 
     // Consumes self and return tokens
+    // Should return Result
     pub fn scan_tokens(mut self) -> Vec<Token> {
         while !self.is_eof() {
             self._start = self._current;

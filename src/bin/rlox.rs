@@ -1,8 +1,7 @@
 use std::error::Error;
 use std::{env, fmt, fs, process};
 
-use ya_rlox::parser::Parser;
-use ya_rlox::scanner::Scanner;
+use ya_rlox::{parser::Parser, scanner::Scanner};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -25,6 +24,7 @@ fn main() {
     println!("Interpreter executed successfully");
 }
 fn run_file(path: &str) -> Result<(), Box<dyn Error>> {
+    // todo: implement batch processing of source
     let source = fs::read_to_string(path)?;
     let lox = Lox::new(source);
     lox.run()?;
@@ -61,6 +61,12 @@ impl Lox {
         Self { source }
     }
 
+    // Running pipeline:
+    // Lox owns `source`.
+    // Lox passes ownership over `source` to Scanner
+    // Scanner consumes source and return Tokens back
+    // Parser consumes tokens and return AST.
+    //
     fn run(self) -> Result<(), BaseError> {
         // if self.scanner.trim() == "err" {
         //     let err = BaseError::new(1, "test.lox".to_string(), "Simulated error".to_string());
