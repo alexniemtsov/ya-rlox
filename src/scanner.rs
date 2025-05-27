@@ -52,28 +52,25 @@ pub enum TokenType {
 }
 
 // Owns everything. Looks like something could be wrong with `lexeme` and heap allocations
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub type_: TokenType,
     lexeme: String,
-    literal: Option<ScanLiteral>,
-    line: usize,
+    pub literal: Option<Literal>,
+    pub line: usize,
 }
 
-#[derive(Debug)]
-pub enum ScanLiteral {
+#[derive(Debug, Clone)]
+pub enum Literal {
+    Boolean(bool),
+    Nil,
     String(String),
     Integer(i64),
     Float(f64),
 }
 
 impl Token {
-    pub fn new(
-        type_: TokenType,
-        lexeme: String,
-        literal: Option<ScanLiteral>,
-        line: usize,
-    ) -> Self {
+    pub fn new(type_: TokenType, lexeme: String, literal: Option<Literal>, line: usize) -> Self {
         Self {
             type_,
             lexeme,
@@ -127,7 +124,7 @@ impl Scanner {
         self.tokens.push(token);
     }
 
-    fn add_token_with_literal(&mut self, type_: TokenType, literal: ScanLiteral) {
+    fn add_token_with_literal(&mut self, type_: TokenType, literal: Literal) {
         let token = Token::new(type_, self.get_lexeme(), Some(literal), self._line);
         self.tokens.push(token);
     }
@@ -231,7 +228,7 @@ impl Scanner {
         }
 
         let val = &self._source[self._start + 1..self._current];
-        let lit = ScanLiteral::String(val.to_string());
+        let lit = Literal::String(val.to_string());
 
         self.advance();
         self.add_token_with_literal(TokenType::String, lit);
@@ -254,8 +251,8 @@ impl Scanner {
         }
         let val = &self._source[self._start..self._current];
         let lit = match is_float {
-            true => ScanLiteral::Float(val.parse().unwrap()),
-            false => ScanLiteral::Integer(val.parse().unwrap()),
+            true => Literal::Float(val.parse().unwrap()),
+            false => Literal::Integer(val.parse().unwrap()),
         };
 
         self.add_token_with_literal(TokenType::Number, lit);

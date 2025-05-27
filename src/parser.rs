@@ -1,16 +1,9 @@
-use crate::scanner::{ScanLiteral, Token, TokenType};
-
-// todo: merge with ScanLiteral
-#[derive(Debug)]
-pub enum ParserLiteral {
-    Boolean(bool),
-    Nil,
-    ScanLiteral(ScanLiteral),
-}
+use crate::scanner::{Literal, Token, TokenType};
 
 #[derive(Debug)]
 pub enum Expr {
-    Literal(ParserLiteral),
+    Literal(Literal),
+    // Unary are always Right associates
     Unary {
         operator: Token,
         right: Box<Expr>,
@@ -55,7 +48,13 @@ pub enum Stmt {
     },
 }
 
-pub struct ParseError {}
+#[derive(Debug)]
+pub enum ParseError {
+    Unknown,
+    InvalidSymbol,
+    ExpectedExpression,
+    MissingLiteral(),
+}
 
 #[derive(Debug)]
 pub struct Ast {}
@@ -78,23 +77,17 @@ impl Parser {
         Expr::Binary {
             left: Box::new(Expr::Unary {
                 operator: Token::new(TokenType::Minus, "-".to_string(), None, 1),
-                right: Box::new(Expr::Literal(ParserLiteral::ScanLiteral(
-                    ScanLiteral::Integer(123),
-                ))),
+                right: Box::new(Expr::Literal(Literal::Integer(123))),
             }),
             operator: Token::new(TokenType::Star, "*".to_string(), None, 1),
-            right: Box::new(Expr::Grouping(Box::new(Expr::Literal(
-                ParserLiteral::ScanLiteral(ScanLiteral::Float(22.35)),
-            )))),
+            right: Box::new(Expr::Grouping(Box::new(Expr::Literal(Literal::Float(
+                22.35,
+            ))))),
         }
     }
 
-    pub fn parse(mut self) -> ParseResult<Vec<Stmt>> {
-        let mut stmts: Vec<Stmt> = Vec::new();
-        while !self.is_eof() {
-            // stmts.push(self.declaration()?);
-        }
-        Ok(stmts)
+    pub fn parse(mut self) -> ParseResult<Expr> {
+        self.expression()
     }
 
     fn peek(&self) -> &Token {
@@ -133,20 +126,128 @@ impl Parser {
         if self.check(t) {
             Ok(self.advance())
         } else {
-            Err(self.error(msg))
+            Err(ParseError::Unknown)
         }
-    }
-
-    fn error(&self, msg: &str) -> ParseError {
-        ParseError {}
     }
 }
 
 // Expressions
 impl Parser {
-    // fn expression(&mut self) -> ParseResult<Expr> {
-    //     self.assignment()
-    // }
+    fn expression(&mut self) -> ParseResult<Expr> {
+        self.equality()
+    }
+
+    fn equality(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.comparison()?;
+
+        while self.matches(vec![TokenType::BangEqual, TokenType::EqualEqual]) {
+            // todo: need to figure out should I .clone() it or not
+            let operator: Token = self.prev().clone();
+            let right: Expr = self.comparison()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+        Ok(expr)
+    }
+
+    fn comparison(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.term()?;
+        while self.matches(vec![
+            TokenType::Greater,
+            TokenType::GreaterEqual,
+            TokenType::Less,
+            TokenType::LessEqual,
+        ]) {
+            let operator: Token = self.prev().clone();
+            let right: Expr = self.term()?;
+
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn term(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.factor()?;
+
+        while self.matches(vec![TokenType::Minus, TokenType::Plus]) {
+            let operator = self.prev().clone();
+            let right = self.factor()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            }
+        }
+        Ok(expr)
+    }
+
+    fn factor(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.unary()?;
+
+        while self.matches(vec![TokenType::Slash, TokenType::Star]) {
+            let operator = self.prev().clone();
+            let right = self.unary()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            }
+        }
+        Ok(expr)
+    }
+
+    fn unary(&mut self) -> ParseResult<Expr> {
+        if self.matches(vec![TokenType::Bang, TokenType::Minus]) {
+            let operator = self.prev().clone();
+            let right = self.unary()?;
+            let expr = Expr::Unary {
+                operator,
+                right: Box::new(right),
+            };
+            return Ok(expr);
+        }
+        self.primary()
+    }
+
+    fn primary(&mut self) -> ParseResult<Expr> {
+        if self.matches(vec![TokenType::False]) {
+            return Ok(Expr::Literal(Literal::Boolean(true)));
+        }
+        if self.matches(vec![TokenType::True]) {
+            return Ok(Expr::Literal(Literal::Boolean(false)));
+        }
+        if self.matches(vec![TokenType::Nil]) {
+            return Ok(Expr::Literal(Literal::Nil));
+        }
+
+        if self.matches(vec![TokenType::Number, TokenType::String]) {
+            let prev: Token = self.prev().clone();
+
+            let lit = prev.literal.ok_or(ParseError::MissingLiteral())?;
+
+            return Ok(Expr::Literal(lit));
+        }
+
+        if self.matches(vec![TokenType::LeftParen]) {
+            let expr = self.expression()?;
+            self.consume(&TokenType::RightParen, "Expect ')' after expression.");
+
+            // todo: add validation if its already inside the grouping.
+
+            let grp = Expr::Grouping(Box::new(expr));
+            return Ok(grp);
+        }
+
+        Err(ParseError::ExpectedExpression)
+    }
 }
 
 // Statements and declarations
@@ -167,7 +268,29 @@ impl Parser {
 }
 
 impl Parser {
-    // fn eval(expr: &Expr) -> Value {
-    //
-    // }
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_eof() {
+            if self.prev().type_ == TokenType::Semicolon {
+                return;
+            }
+
+            let acc = match self.peek().type_ {
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::Var
+                | TokenType::For
+                | TokenType::If
+                | TokenType::While
+                | TokenType::Print
+                | TokenType::Return => true,
+                _ => false,
+            };
+
+            if !acc {
+                self.advance();
+            }
+        }
+    }
 }

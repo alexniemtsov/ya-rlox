@@ -75,8 +75,8 @@ impl Lox {
         // }
         let tokens = Scanner::new(self.source).scan_tokens();
         println!("{:#?}", tokens);
-        let ast = Parser::new(tokens).test();
-        println!("{:#?}", ast);
+        let expr = Parser::new(tokens).parse();
+        println!("{:#?}", expr);
 
         Ok(())
     }
