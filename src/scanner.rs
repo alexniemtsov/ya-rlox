@@ -78,13 +78,6 @@ impl Token {
             line,
         }
     }
-
-    fn to_string(&self) -> String {
-        format!(
-            "_T: type={:?} lex={} lit={:?} line={}",
-            &self.type_, self.lexeme, self.literal, self.line
-        )
-    }
 }
 
 pub struct Scanner {

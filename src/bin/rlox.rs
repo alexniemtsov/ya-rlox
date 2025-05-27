@@ -66,20 +66,13 @@ impl Lox {
     // Lox passes ownership over `source` to Scanner
     // Scanner consumes source and return Tokens back
     // Parser consumes tokens and return AST.
-    //
     fn run(self) -> Result<(), LoxError> {
-        // if self.scanner.trim() == "err" {
-        //     let err = BaseError::new(1, "test.lox".to_string(), "Simulated error".to_string());
-        //
-        //     return Err(err);
-        // }
-
         // todo: scan could implement Iterator
         let tokens = Scanner::new(self.source).scan_tokens();
         println!("{:#?}", tokens);
         match Parser::new(tokens).parse() {
             Ok(a) => println!("{:#?}", a),
-            Err(e) => eprintln!("{}", e),
+            Err(e) => e.report(),
         };
 
         Ok(())

@@ -20,11 +20,11 @@ impl fmt::Display for LoxError {
 
 impl LoxError {
     // todo: Change to `impl Into<String>
-    fn new(line: usize, where_: String, msg: String) -> Self {
+    pub fn new(line: usize, where_: String, msg: String) -> Self {
         Self { line, where_, msg }
     }
 
-    fn report(&self) {
+    pub fn report(&self) {
         eprintln!("[line {}] Error {}: {}", self.line, self.where_, self.msg);
     }
 }

@@ -231,9 +231,9 @@ impl Parser {
             return match prev.literal {
                 Some(l) => Ok(Expr::Literal(l)),
                 None => Err(LoxError {
-                    line: 1,
+                    line: prev.line,
                     where_: "ParseError".to_string(),
-                    msg: "ExpectedExpression".to_string(),
+                    msg: "No literal value".to_string(),
                 }),
             };
         }
@@ -247,9 +247,10 @@ impl Parser {
             let grp = Expr::Grouping(Box::new(expr));
             return Ok(grp);
         }
+        let err_idx = self._current;
         Err(LoxError {
-            line: 1,
-            where_: "ParseError".to_string(),
+            line: 0,
+            where_: format!("Unexpected token at: {err_idx}"),
             msg: "ExpectedExpression".to_string(),
         })
     }
