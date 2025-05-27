@@ -1,3 +1,4 @@
+use crate::err::LoxError;
 use crate::scanner::{Literal, Token, TokenType};
 
 #[derive(Debug)]
@@ -49,21 +50,13 @@ pub enum Stmt {
 }
 
 #[derive(Debug)]
-pub enum ParseError {
-    Unknown,
-    InvalidSymbol,
-    ExpectedExpression,
-    MissingLiteral(),
-}
-
-#[derive(Debug)]
 pub struct Ast {}
 
 pub struct Parser {
     tokens: Vec<Token>,
     _current: usize,
 }
-pub type ParseResult<T> = Result<T, ParseError>;
+pub type ParseResult<T> = Result<T, LoxError>;
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
@@ -113,7 +106,7 @@ impl Parser {
         !self.is_eof() && &self.peek().type_ == t
     }
 
-    fn matches(&mut self, types: Vec<TokenType>) -> bool {
+    fn matches(&mut self, types: &[TokenType]) -> bool {
         if types.iter().any(|t| self.check(t)) {
             self.advance();
             true
@@ -126,7 +119,11 @@ impl Parser {
         if self.check(t) {
             Ok(self.advance())
         } else {
-            Err(ParseError::Unknown)
+            Err(LoxError {
+                line: 1,
+                where_: "Consume:UnknownError".to_string(),
+                msg: msg.to_string(),
+            })
         }
     }
 }
@@ -140,7 +137,7 @@ impl Parser {
     fn equality(&mut self) -> ParseResult<Expr> {
         let mut expr = self.comparison()?;
 
-        while self.matches(vec![TokenType::BangEqual, TokenType::EqualEqual]) {
+        while self.matches(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             // todo: need to figure out should I .clone() it or not
             let operator: Token = self.prev().clone();
             let right: Expr = self.comparison()?;
@@ -155,7 +152,7 @@ impl Parser {
 
     fn comparison(&mut self) -> ParseResult<Expr> {
         let mut expr = self.term()?;
-        while self.matches(vec![
+        while self.matches(&[
             TokenType::Greater,
             TokenType::GreaterEqual,
             TokenType::Less,
@@ -177,7 +174,7 @@ impl Parser {
     fn term(&mut self) -> ParseResult<Expr> {
         let mut expr = self.factor()?;
 
-        while self.matches(vec![TokenType::Minus, TokenType::Plus]) {
+        while self.matches(&[TokenType::Minus, TokenType::Plus]) {
             let operator = self.prev().clone();
             let right = self.factor()?;
             expr = Expr::Binary {
@@ -192,7 +189,7 @@ impl Parser {
     fn factor(&mut self) -> ParseResult<Expr> {
         let mut expr = self.unary()?;
 
-        while self.matches(vec![TokenType::Slash, TokenType::Star]) {
+        while self.matches(&[TokenType::Slash, TokenType::Star]) {
             let operator = self.prev().clone();
             let right = self.unary()?;
             expr = Expr::Binary {
@@ -205,7 +202,7 @@ impl Parser {
     }
 
     fn unary(&mut self) -> ParseResult<Expr> {
-        if self.matches(vec![TokenType::Bang, TokenType::Minus]) {
+        if self.matches(&[TokenType::Bang, TokenType::Minus]) {
             let operator = self.prev().clone();
             let right = self.unary()?;
             let expr = Expr::Unary {
@@ -218,25 +215,30 @@ impl Parser {
     }
 
     fn primary(&mut self) -> ParseResult<Expr> {
-        if self.matches(vec![TokenType::False]) {
+        if self.matches(&[TokenType::False]) {
             return Ok(Expr::Literal(Literal::Boolean(false)));
         }
-        if self.matches(vec![TokenType::True]) {
+        if self.matches(&[TokenType::True]) {
             return Ok(Expr::Literal(Literal::Boolean(true)));
         }
-        if self.matches(vec![TokenType::Nil]) {
+        if self.matches(&[TokenType::Nil]) {
             return Ok(Expr::Literal(Literal::Nil));
         }
 
-        if self.matches(vec![TokenType::Number, TokenType::String]) {
+        if self.matches(&[TokenType::Number, TokenType::String]) {
             let prev: Token = self.prev().clone();
 
-            let lit = prev.literal.ok_or(ParseError::MissingLiteral())?;
-
-            return Ok(Expr::Literal(lit));
+            return match prev.literal {
+                Some(l) => Ok(Expr::Literal(l)),
+                None => Err(LoxError {
+                    line: 1,
+                    where_: "ParseError".to_string(),
+                    msg: "ExpectedExpression".to_string(),
+                }),
+            };
         }
 
-        if self.matches(vec![TokenType::LeftParen]) {
+        if self.matches(&[TokenType::LeftParen]) {
             let expr = self.expression()?;
             let _ = self.consume(&TokenType::RightParen, "Expect ')' after expression.");
 
@@ -245,8 +247,11 @@ impl Parser {
             let grp = Expr::Grouping(Box::new(expr));
             return Ok(grp);
         }
-
-        Err(ParseError::ExpectedExpression)
+        Err(LoxError {
+            line: 1,
+            where_: "ParseError".to_string(),
+            msg: "ExpectedExpression".to_string(),
+        })
     }
 }
 

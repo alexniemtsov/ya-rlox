@@ -1,7 +1,7 @@
 use std::error::Error;
-use std::{env, fmt, fs, process};
+use std::{env, fs, process};
 
-use ya_rlox::{parser::Parser, scanner::Scanner};
+use ya_rlox::{err::LoxError, parser::Parser, scanner::Scanner};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -77,39 +77,11 @@ impl Lox {
         // todo: scan could implement Iterator
         let tokens = Scanner::new(self.source).scan_tokens();
         println!("{:#?}", tokens);
-        let expr = Parser::new(tokens).parse();
-        println!("{:#?}", expr);
+        match Parser::new(tokens).parse() {
+            Ok(a) => println!("{:#?}", a),
+            Err(e) => eprintln!("{}", e),
+        };
 
         Ok(())
     }
 }
-
-#[derive(Clone, Debug)]
-struct LoxError {
-    line: usize,
-    where_: String,
-    msg: String,
-}
-
-impl fmt::Display for LoxError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[line {}] Error {}: {}",
-            self.line, self.where_, self.msg
-        )
-    }
-}
-
-impl LoxError {
-    // todo: Change to `impl Into<String>
-    fn new(line: usize, where_: String, msg: String) -> Self {
-        Self { line, where_, msg }
-    }
-
-    fn report(&self) {
-        eprintln!("[line {}] Error {}: {}", self.line, self.where_, self.msg);
-    }
-}
-
-impl Error for LoxError {}
