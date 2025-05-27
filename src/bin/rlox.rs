@@ -73,6 +73,8 @@ impl Lox {
         //
         //     return Err(err);
         // }
+
+        // todo: scan could implement Iterator
         let tokens = Scanner::new(self.source).scan_tokens();
         println!("{:#?}", tokens);
         let expr = Parser::new(tokens).parse();

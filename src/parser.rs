@@ -219,10 +219,10 @@ impl Parser {
 
     fn primary(&mut self) -> ParseResult<Expr> {
         if self.matches(vec![TokenType::False]) {
-            return Ok(Expr::Literal(Literal::Boolean(true)));
+            return Ok(Expr::Literal(Literal::Boolean(false)));
         }
         if self.matches(vec![TokenType::True]) {
-            return Ok(Expr::Literal(Literal::Boolean(false)));
+            return Ok(Expr::Literal(Literal::Boolean(true)));
         }
         if self.matches(vec![TokenType::Nil]) {
             return Ok(Expr::Literal(Literal::Nil));
@@ -238,7 +238,7 @@ impl Parser {
 
         if self.matches(vec![TokenType::LeftParen]) {
             let expr = self.expression()?;
-            self.consume(&TokenType::RightParen, "Expect ')' after expression.");
+            let _ = self.consume(&TokenType::RightParen, "Expect ')' after expression.");
 
             // todo: add validation if its already inside the grouping.
 
@@ -275,18 +275,17 @@ impl Parser {
             if self.prev().type_ == TokenType::Semicolon {
                 return;
             }
-
-            let acc = match self.peek().type_ {
+            let acc = matches!(
+                self.peek().type_,
                 TokenType::Class
-                | TokenType::Fun
-                | TokenType::Var
-                | TokenType::For
-                | TokenType::If
-                | TokenType::While
-                | TokenType::Print
-                | TokenType::Return => true,
-                _ => false,
-            };
+                    | TokenType::Fun
+                    | TokenType::Var
+                    | TokenType::For
+                    | TokenType::If
+                    | TokenType::While
+                    | TokenType::Print
+                    | TokenType::Return
+            );
 
             if !acc {
                 self.advance();

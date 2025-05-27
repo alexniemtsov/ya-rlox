@@ -303,7 +303,7 @@ impl Scanner {
             "for" => Some(TokenType::For),
             "fun" => Some(TokenType::Fun),
             "if" => Some(TokenType::If),
-            "nil" => Some(TokenType::If),
+            "nil" => Some(TokenType::Nil),
             "while" => Some(TokenType::While),
             "or" => Some(TokenType::Or),
             "print" => Some(TokenType::Print),
