@@ -247,10 +247,10 @@ impl Parser {
             let grp = Expr::Grouping(Box::new(expr));
             return Ok(grp);
         }
-        let err_idx = self._current;
+        let token = self.peek();
         Err(LoxError {
-            line: 0,
-            where_: format!("Unexpected token at: {err_idx}"),
+            line: token.line,
+            where_: format!("Unexpected token `{}` at: {}", token.lexeme, self._current),
             msg: "ExpectedExpression".to_string(),
         })
     }
