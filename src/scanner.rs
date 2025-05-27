@@ -1,6 +1,6 @@
 // Scanner reads provided string and returns tokens instead.
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenType {
     // Single-character tokens
     LeftParen,
@@ -51,24 +51,29 @@ pub enum TokenType {
     Eof,
 }
 
-// Owns everything.
+// Owns everything. Looks like something could be wrong with `lexeme` and heap allocations
 #[derive(Debug)]
 pub struct Token {
     pub type_: TokenType,
     lexeme: String,
-    literal: Option<Literal>,
+    literal: Option<ScanLiteral>,
     line: usize,
 }
 
 #[derive(Debug)]
-pub enum Literal {
+pub enum ScanLiteral {
     String(String),
     Integer(i64),
     Float(f64),
 }
 
 impl Token {
-    pub fn new(type_: TokenType, lexeme: String, literal: Option<Literal>, line: usize) -> Self {
+    pub fn new(
+        type_: TokenType,
+        lexeme: String,
+        literal: Option<ScanLiteral>,
+        line: usize,
+    ) -> Self {
         Self {
             type_,
             lexeme,
@@ -122,7 +127,7 @@ impl Scanner {
         self.tokens.push(token);
     }
 
-    fn add_token_with_literal(&mut self, type_: TokenType, literal: Literal) {
+    fn add_token_with_literal(&mut self, type_: TokenType, literal: ScanLiteral) {
         let token = Token::new(type_, self.get_lexeme(), Some(literal), self._line);
         self.tokens.push(token);
     }
@@ -226,7 +231,7 @@ impl Scanner {
         }
 
         let val = &self._source[self._start + 1..self._current];
-        let lit = Literal::String(val.to_string());
+        let lit = ScanLiteral::String(val.to_string());
 
         self.advance();
         self.add_token_with_literal(TokenType::String, lit);
@@ -249,8 +254,8 @@ impl Scanner {
         }
         let val = &self._source[self._start..self._current];
         let lit = match is_float {
-            true => Literal::Float(val.parse().unwrap()),
-            false => Literal::Integer(val.parse().unwrap()),
+            true => ScanLiteral::Float(val.parse().unwrap()),
+            false => ScanLiteral::Integer(val.parse().unwrap()),
         };
 
         self.add_token_with_literal(TokenType::Number, lit);

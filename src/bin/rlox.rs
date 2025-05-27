@@ -67,7 +67,7 @@ impl Lox {
     // Scanner consumes source and return Tokens back
     // Parser consumes tokens and return AST.
     //
-    fn run(self) -> Result<(), BaseError> {
+    fn run(self) -> Result<(), LoxError> {
         // if self.scanner.trim() == "err" {
         //     let err = BaseError::new(1, "test.lox".to_string(), "Simulated error".to_string());
         //
@@ -75,7 +75,7 @@ impl Lox {
         // }
         let tokens = Scanner::new(self.source).scan_tokens();
         println!("{:#?}", tokens);
-        let ast = Parser::new(tokens).parse();
+        let ast = Parser::new(tokens).test();
         println!("{:#?}", ast);
 
         Ok(())
@@ -83,13 +83,13 @@ impl Lox {
 }
 
 #[derive(Clone, Debug)]
-struct BaseError {
+struct LoxError {
     line: usize,
     where_: String,
     msg: String,
 }
 
-impl fmt::Display for BaseError {
+impl fmt::Display for LoxError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -99,7 +99,7 @@ impl fmt::Display for BaseError {
     }
 }
 
-impl BaseError {
+impl LoxError {
     // todo: Change to `impl Into<String>
     fn new(line: usize, where_: String, msg: String) -> Self {
         Self { line, where_, msg }
@@ -110,4 +110,4 @@ impl BaseError {
     }
 }
 
-impl Error for BaseError {}
+impl Error for LoxError {}

@@ -1,12 +1,15 @@
-use crate::scanner::{Literal as TokenLit, Token, TokenType};
+use crate::scanner::{ScanLiteral, Token, TokenType};
 
-enum ParserLiteral {
+// todo: merge with ScanLiteral
+#[derive(Debug)]
+pub enum ParserLiteral {
     Boolean(bool),
     Nil,
-    TokenLit(TokenLit),
+    ScanLiteral(ScanLiteral),
 }
 
-enum Expr {
+#[derive(Debug)]
+pub enum Expr {
     Literal(ParserLiteral),
     Unary {
         operator: Token,
@@ -14,7 +17,7 @@ enum Expr {
     },
     Binary {
         left: Box<Expr>,
-        operator: Token,
+        operator: Token, // should be TokenType
         right: Box<Expr>,
     },
     Grouping(Box<Expr>),
@@ -26,6 +29,34 @@ enum Expr {
     },
 }
 
+pub enum Stmt {
+    Expression(Expr),
+    Print(Expr),
+    Var {
+        name: Token,
+        init: Option<Expr>,
+    },
+    Block {
+        stmts: Vec<Stmt>,
+    },
+    If {
+        cond: Expr,
+        then_br: Box<Stmt>,
+        else_br: Option<Box<Stmt>>,
+    },
+    While {
+        cond: Expr,
+        body: Box<Stmt>,
+    },
+    Func {
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    },
+}
+
+pub struct ParseError {}
+
 #[derive(Debug)]
 pub struct Ast {}
 
@@ -33,6 +64,7 @@ pub struct Parser {
     tokens: Vec<Token>,
     _current: usize,
 }
+pub type ParseResult<T> = Result<T, ParseError>;
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
@@ -42,11 +74,27 @@ impl Parser {
         }
     }
 
-    pub fn parse(self) -> Ast {
-        for t in self.tokens.iter() {
-            println!("{:#?}", t);
+    pub fn test(&self) -> Expr {
+        Expr::Binary {
+            left: Box::new(Expr::Unary {
+                operator: Token::new(TokenType::Minus, "-".to_string(), None, 1),
+                right: Box::new(Expr::Literal(ParserLiteral::ScanLiteral(
+                    ScanLiteral::Integer(123),
+                ))),
+            }),
+            operator: Token::new(TokenType::Star, "*".to_string(), None, 1),
+            right: Box::new(Expr::Grouping(Box::new(Expr::Literal(
+                ParserLiteral::ScanLiteral(ScanLiteral::Float(22.35)),
+            )))),
         }
-        Ast {}
+    }
+
+    pub fn parse(mut self) -> ParseResult<Vec<Stmt>> {
+        let mut stmts: Vec<Stmt> = Vec::new();
+        while !self.is_eof() {
+            // stmts.push(self.declaration()?);
+        }
+        Ok(stmts)
     }
 
     fn peek(&self) -> &Token {
@@ -68,16 +116,58 @@ impl Parser {
         self.prev()
     }
 
-    fn check(&self, t: TokenType) -> bool {
-        !self.is_eof() && self.peek().type_ == t
+    fn check(&self, t: &TokenType) -> bool {
+        !self.is_eof() && &self.peek().type_ == t
     }
 
-    fn matches(&mut self, types: &[TokenType]) -> bool {
-        if types.iter().any(|t| self.check(*t)) {
+    fn matches(&mut self, types: Vec<TokenType>) -> bool {
+        if types.iter().any(|t| self.check(t)) {
             self.advance();
             true
         } else {
             false
         }
     }
+
+    fn consume(&mut self, t: &TokenType, msg: &str) -> ParseResult<&Token> {
+        if self.check(t) {
+            Ok(self.advance())
+        } else {
+            Err(self.error(msg))
+        }
+    }
+
+    fn error(&self, msg: &str) -> ParseError {
+        ParseError {}
+    }
+}
+
+// Expressions
+impl Parser {
+    // fn expression(&mut self) -> ParseResult<Expr> {
+    //     self.assignment()
+    // }
+}
+
+// Statements and declarations
+impl Parser {
+    // fn declaration(&mut self) -> ParseResult<Stmt> {
+    //     if self.matches(vec![TokenType::Var]) {
+    //         self.function() // todo: handle
+    //     } else if self.matches(vec![TokenType::Var]) {
+    //         self.var_declare()
+    //     } else {
+    //         self.statement()
+    //     }
+    // }
+    //
+    // fn statement(&self) -> ParseResult<Stmt> {
+    //     //todo: match statement: expr, print, block, if, while
+    // }
+}
+
+impl Parser {
+    // fn eval(expr: &Expr) -> Value {
+    //
+    // }
 }
