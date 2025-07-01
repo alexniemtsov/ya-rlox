@@ -67,6 +67,8 @@ impl Lox {
     // Scanner consumes source and return Tokens back
     // Parser consumes tokens and return AST.
     fn run(self) -> Result<(), LoxError> {
+        println!("Source: \"{}\"", self.source);
+
         // todo: scan could implement Iterator
         let tokens = Scanner::new(self.source).scan_tokens();
         println!("{:#?}", tokens);

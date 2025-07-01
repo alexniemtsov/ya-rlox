@@ -281,7 +281,7 @@ impl Parser {
             if self.prev().type_ == TokenType::Semicolon {
                 return;
             }
-            let acc = matches!(
+            if !matches!(
                 self.peek().type_,
                 TokenType::Class
                     | TokenType::Fun
@@ -291,9 +291,7 @@ impl Parser {
                     | TokenType::While
                     | TokenType::Print
                     | TokenType::Return
-            );
-
-            if !acc {
+            ) {
                 self.advance();
             }
         }
