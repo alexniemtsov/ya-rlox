@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use crate::{
     err::LoxError,
     parser::Expr,
@@ -30,11 +28,31 @@ impl Value {
             _ => false,
         }
     }
+
+    fn to_string(&self) -> String {
+        match self {
+            Self::Nil => "<NIL>".to_string(),
+            Self::Number(n) => n.to_string(),
+            Self::Bool(b) => b.to_string(),
+            Self::Str(s) => s.clone(),
+        }
+    }
 }
 
-pub struct Interpreter {}
+pub struct Interpreter {
+    pub ast: Expr,
+}
 
-impl Interpreter {}
+impl Interpreter {
+    pub fn new(ast: Expr) -> Self {
+        Self { ast }
+    }
+
+    pub fn interpret(&self) {
+        let val = self.ast.evaluate();
+        println!("val {:?}", val);
+    }
+}
 
 pub type RuntimeResult = Result<Value, LoxError>;
 
@@ -100,6 +118,7 @@ impl Expr {
                         l.to_owned().push_str(r.as_str());
                         Ok(Value::Str(l))
                     }
+
                     (TokenType::Plus, _, _) => Err(LoxError::at_token(
                         operator,
                         "Operand must be number or str",

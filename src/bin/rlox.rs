@@ -1,6 +1,8 @@
 use std::error::Error;
+use std::io::ErrorKind;
 use std::{env, fs, process};
 
+use ya_rlox::interpreter::Interpreter;
 use ya_rlox::{err::LoxError, parser::Parser, scanner::Scanner};
 
 fn main() {
@@ -72,10 +74,10 @@ impl Lox {
         // todo: scan could implement Iterator
         let tokens = Scanner::new(self.source).scan_tokens();
         // println!("{:#?}", tokens);
-        match Parser::new(tokens).parse() {
-            Ok(a) => println!("{:#?}", a),
-            Err(e) => e.report(),
-        };
+        let ast = Parser::new(tokens).parse()?;
+
+        let i8r = Interpreter::new(ast);
+        i8r.interpret();
 
         Ok(())
     }
