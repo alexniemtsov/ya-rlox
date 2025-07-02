@@ -272,6 +272,7 @@ impl Scanner {
         self.add_token(t);
     }
 
+    // For Predictive Parsing
     fn lookahead(&mut self, expect: char, on_found: TokenType, _escape: Option<char>) {
         // todo: handle multiline comments /* ... */
         let esc = _escape.unwrap_or('\n');

@@ -71,7 +71,7 @@ impl Lox {
 
         // todo: scan could implement Iterator
         let tokens = Scanner::new(self.source).scan_tokens();
-        println!("{:#?}", tokens);
+        // println!("{:#?}", tokens);
         match Parser::new(tokens).parse() {
             Ok(a) => println!("{:#?}", a),
             Err(e) => e.report(),
