@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::io::ErrorKind;
 use std::{env, fs, process};
 
 use ya_rlox::interpreter::Interpreter;
@@ -76,8 +75,12 @@ impl Lox {
         // println!("{:#?}", tokens);
         let ast = Parser::new(tokens).parse()?;
 
-        let i8r = Interpreter::new(ast);
-        i8r.interpret();
+        println!("Ast: {:#?}", ast);
+
+        let mut i8r = Interpreter::new(ast);
+        let res = i8r.interpret();
+
+        println!("res: {:?}", res);
 
         Ok(())
     }

@@ -1,6 +1,8 @@
 use std::error::Error;
 use std::fmt;
 
+use crate::scanner::Token;
+
 #[derive(Clone, Debug)]
 pub struct LoxError {
     pub line: usize,
@@ -19,13 +21,16 @@ impl fmt::Display for LoxError {
 }
 
 impl LoxError {
-    // todo: Change to `impl Into<String>
     pub fn new(line: usize, where_: String, msg: impl Into<String>) -> Self {
         Self {
             line,
             where_,
             msg: msg.into(),
         }
+    }
+
+    pub fn runtime_error(token: &Token, msg: impl Into<String>) -> Self {
+        Self::new(token.line, token.lexeme.clone(), msg)
     }
 
     pub fn report(&self) {

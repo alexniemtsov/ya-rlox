@@ -1,15 +1,22 @@
 use crate::{
+    env::Env,
     err::LoxError,
-    parser::Expr,
+    parser::{Expr, Stmt},
     scanner::{Literal, Token, TokenType},
 };
 
 #[derive(Clone, Debug)]
 pub enum Value {
+    Nil,
     Number(f64),
     Bool(bool),
     Str(String),
-    Nil,
+}
+
+impl Default for Value {
+    fn default() -> Self {
+        Value::Nil
+    }
 }
 
 impl Value {
@@ -40,48 +47,69 @@ impl Value {
 }
 
 pub struct Interpreter {
-    pub ast: Expr,
+    pub ast: Vec<Stmt>,
+
+    env: Env,
 }
 
 impl Interpreter {
-    pub fn new(ast: Expr) -> Self {
-        Self { ast }
-    }
-
-    pub fn interpret(&self) {
-        let val = self.ast.evaluate();
-        println!("val {:?}", val);
-    }
-}
-
-pub type RuntimeResult = Result<Value, LoxError>;
-
-impl LoxError {
-    pub fn at_token(token: &Token, msg: impl Into<String>) -> Self {
-        LoxError::new(token.line, token.lexeme.clone(), msg)
-    }
-}
-
-impl Literal {
-    pub fn evaluate(&self) -> Value {
-        match self {
-            Self::Nil => Value::Nil,
-            Self::Boolean(v) => Value::Bool(*v),
-            Self::String(v) => Value::Str(v.clone()),
-            Self::Integer(v) => Value::Number(*v as f64),
-            Self::Float(v) => Value::Number(*v),
+    pub fn new(ast: Vec<Stmt>) -> Self {
+        Self {
+            ast,
+            env: Env::new(),
         }
     }
-}
 
-impl Expr {
-    pub fn evaluate(&self) -> RuntimeResult {
-        match self {
+    pub fn interpret(&mut self) -> Result<(), LoxError> {
+        while let Some(stmt) = self.ast.pop() {
+            self.execute(&stmt)?;
+        }
+        Ok(())
+    }
+
+    pub fn execute(&mut self, statement: &Stmt) -> Result<(), LoxError> {
+        match statement {
+            Stmt::Var { name, init } => {
+                let value = match init {
+                    Some(expr) => Some(self.evaluate(expr)?),
+                    None => None,
+                };
+                self.env.define(name.lexeme.clone(), value);
+            }
+            Stmt::Block { stmts } => {
+                let nested = Env::from_enclosing(self.env.clone());
+                self.execute_block(stmts.clone(), nested)?;
+            }
+
+            Stmt::Print(expr) => {
+                let value = self.evaluate(expr);
+                println!("Print: {:?}", value);
+            }
+            _ => unimplemented!("Not yet"),
+        }
+        Ok(())
+    }
+
+    fn execute_block(&mut self, statements: Vec<Stmt>, mut new_env: Env) -> Result<(), LoxError> {
+        std::mem::swap(&mut self.env, &mut new_env);
+        for stmt in statements {
+            self.execute(&stmt)?;
+        }
+        std::mem::swap(&mut self.env, &mut new_env);
+        Ok(())
+    }
+
+    pub fn ast(&self) -> &[Stmt] {
+        &self.ast
+    }
+
+    pub fn evaluate(&mut self, expr: &Expr) -> RuntimeResult {
+        match expr {
             Expr::Literal(lit) => {
                 return Ok(lit.evaluate());
             }
-            Self::Unary { operator, right } => {
-                let right = right.evaluate()?;
+            Expr::Unary { operator, right } => {
+                let right = self.evaluate(right)?;
                 match (&operator.type_, right) {
                     (TokenType::Minus, Value::Number(n)) => Ok(Value::Number(-n)),
                     (TokenType::Minus, _) => Err(LoxError::at_token(
@@ -99,13 +127,19 @@ impl Expr {
                     (_, _) => unreachable!("Invalid unary operator"),
                 }
             }
-            Self::Binary {
+            Expr::Assign { name, value } => {
+                let val = self.evaluate(&value)?;
+                self.env.assign(name, val.clone())?;
+                Ok(val)
+            }
+
+            Expr::Binary {
                 left,
                 operator,
                 right,
             } => {
-                let left = left.evaluate()?;
-                let right = right.evaluate()?;
+                let left = self.evaluate(left)?;
+                let right = self.evaluate(right)?;
 
                 match (&operator.type_, left, right) {
                     (TokenType::Minus, Value::Number(l), Value::Number(r)) => {
@@ -166,17 +200,44 @@ impl Expr {
                     _ => unreachable!("Invalid binary operator"),
                 }
             }
-            Self::Grouping(expr) => {
-                return expr.evaluate();
+            Expr::Grouping(expr) => {
+                return self.evaluate(expr);
             }
-            Self::Variable(_) => {
-                return Ok(Value::Nil);
-            }
-            Self::Assign { name, value } => {
-                return Ok(Value::Nil);
+            Expr::Variable(token) => {
+                // todo: Am I really need to clone the value? I assume when the value is returned
+                // it should be operated as original
+                if let Some(v) = self.env.get(&token) {
+                    return Ok(v.clone());
+                } else {
+                    return Err(LoxError::new(
+                        token.line,
+                        token.lexeme.clone(),
+                        "Undefined variable",
+                    ));
+                }
             }
         }
     }
+}
 
-    pub fn accept() {}
+impl Expr {}
+
+pub type RuntimeResult = Result<Value, LoxError>;
+
+impl LoxError {
+    pub fn at_token(token: &Token, msg: impl Into<String>) -> Self {
+        LoxError::new(token.line, token.lexeme.clone(), msg)
+    }
+}
+
+impl Literal {
+    pub fn evaluate(&self) -> Value {
+        match self {
+            Self::Nil => Value::Nil,
+            Self::Boolean(v) => Value::Bool(*v),
+            Self::String(v) => Value::Str(v.clone()),
+            Self::Integer(v) => Value::Number(*v as f64),
+            Self::Float(v) => Value::Number(*v),
+        }
+    }
 }
