@@ -20,6 +20,14 @@ impl Default for Value {
 }
 
 impl Value {
+    fn is_truthy(&self) -> bool {
+        match self {
+            Self::Nil => false,
+            Self::Number(_) => true,
+            Self::Str(s) => s.is_empty(),
+            Self::Bool(b) => b == &true,
+        }
+    }
     fn is_equal(&self, v: &Value) -> bool {
         match (self, v) {
             (Self::Number(l), Self::Number(r)) => {
@@ -60,10 +68,11 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret(&mut self) -> Result<(), LoxError> {
-        while let Some(stmt) = self.ast.pop() {
+    pub fn interpret(mut self) -> Result<(), LoxError> {
+        for stmt in self.ast.clone() {
             self.execute(&stmt)?;
         }
+        println!("Memory layout: {:?}", self.env);
         Ok(())
     }
 
@@ -85,7 +94,23 @@ impl Interpreter {
                 let value = self.evaluate(expr);
                 println!("Print: {:?}", value);
             }
-            _ => unimplemented!("Not yet"),
+            Stmt::Expression(expr) => {
+                let value = self.evaluate(expr);
+                println!("expression {:?}", expr);
+            }
+            Stmt::If {
+                cond,
+                then_br,
+                else_br,
+            } => {
+                if self.evaluate(cond)?.is_truthy() {
+                    _ = self.execute(&then_br);
+                } else if let Some(el) = else_br {
+                    _ = self.execute(el);
+                }
+            }
+
+            _ => unimplemented!("Not yet {:?}", statement),
         }
         Ok(())
     }
@@ -209,12 +234,30 @@ impl Interpreter {
                 if let Some(v) = self.env.get(&token) {
                     return Ok(v.clone());
                 } else {
+                    println!("Var not found: {:?}", self.env);
                     return Err(LoxError::new(
                         token.line,
                         token.lexeme.clone(),
                         "Undefined variable",
                     ));
                 }
+            }
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.evaluate(&left)?;
+                if operator.type_ == TokenType::Or {
+                    if left.is_truthy() {
+                        return Ok(left);
+                    }
+                } else {
+                    if !left.is_truthy() {
+                        return Ok(left);
+                    }
+                }
+                return Ok(self.evaluate(&right)?);
             }
         }
     }

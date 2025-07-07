@@ -11,7 +11,7 @@ pub enum Expr {
     },
     Binary {
         left: Box<Expr>,
-        operator: Token, // should be TokenType
+        operator: Token,
         right: Box<Expr>,
     },
     Grouping(Box<Expr>),
@@ -20,6 +20,11 @@ pub enum Expr {
     Assign {
         name: Token,
         value: Box<Expr>,
+    },
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
     },
 }
 
@@ -123,7 +128,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> ParseResult<Expr> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
         if self.matches(&[TokenType::Equal]) {
             let eq = self.prev().clone();
             let value = self.assignment()?;
@@ -227,6 +232,35 @@ impl Parser {
         self.primary()
     }
 
+    fn or(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.and()?;
+
+        while self.matches(&[TokenType::Or]) {
+            let operator = self.prev().clone();
+            let right = self.and()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.equality()?;
+        while self.matches(&[TokenType::And]) {
+            let operator = self.prev().clone();
+            let right = self.equality()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            }
+        }
+        Ok(expr)
+    }
+
     fn primary(&mut self) -> ParseResult<Expr> {
         if self.matches(&[TokenType::False]) {
             return Ok(Expr::Literal(Literal::Boolean(false)));
@@ -260,11 +294,13 @@ impl Parser {
             let grp = Expr::Grouping(Box::new(expr));
             return Ok(grp);
         }
-        if self.matches(&[TokenType::Var]) {
+
+        if self.matches(&[TokenType::Identifier]) {
             return Ok(Expr::Variable(self.prev().clone()));
         }
 
         let token = self.peek();
+
         Err(LoxError {
             line: token.line,
             where_: format!("Unexpected token `{}` at: {}", token.lexeme, self._current),
@@ -310,6 +346,10 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Stmt {
+        if self.matches(&[TokenType::If]) {
+            return self.if_statement();
+        }
+
         if self.matches(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -319,7 +359,26 @@ impl Parser {
                 stmts: self.block(),
             };
         }
+
         return self.expression_statement();
+    }
+
+    fn if_statement(&mut self) -> Stmt {
+        _ = self.consume(&TokenType::LeftParen, "Expect '(' after 'if'.");
+        let cond = self.expression().unwrap();
+        _ = self.consume(&TokenType::RightParen, "Expect ')' after if condition.");
+
+        let then_br = self.statement();
+        let mut else_br = None;
+        if self.matches(&[TokenType::Else]) {
+            else_br = Some(Box::new(self.statement()));
+        }
+
+        Stmt::If {
+            cond,
+            then_br: Box::new(then_br),
+            else_br,
+        }
     }
 
     fn block(&mut self) -> Vec<Stmt> {

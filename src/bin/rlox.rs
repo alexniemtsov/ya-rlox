@@ -8,7 +8,8 @@ fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
 
     let result = match args.len() {
-        0 => run_file("test.lox"),
+        0 => run_prompt(),
+        // 0 => run_file("test.lox"),
         // 0 => run_prompt(),
         1 => run_file(&args[0]),
         _ => {
@@ -33,25 +34,25 @@ fn run_file(path: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// fn run_prompt() -> Result<(), Box<dyn Error>> {
-//     let s_in = io::stdin();
-//     loop {
-//         print!("> ");
-//         let mut line = String::new();
-//         io::Write::flush(&mut io::stdout())?;
-//         let bytes_read = s_in.read_line(&mut line)?;
-//         if bytes_read == 0 {
-//             break; // EOF (Ctrl+D, Ctrl+Z)
-//         }
-//
-//         let lox = Lox::new(line);
-//         if let Err(e) = lox.run() {
-//             eprintln!("Runtime error: {e}")
-//         }
-//     }
-//
-//     Ok(())
-// }
+fn run_prompt() -> Result<(), Box<dyn Error>> {
+    let s_in = std::io::stdin();
+    loop {
+        print!("> ");
+        let mut line = String::new();
+        std::io::Write::flush(&mut std::io::stdout())?;
+        let bytes_read = s_in.read_line(&mut line)?;
+        if bytes_read == 0 {
+            break; // EOF (Ctrl+D, Ctrl+Z)
+        }
+
+        let lox = Lox::new(line);
+        if let Err(e) = lox.run() {
+            eprintln!("Runtime error: {e}")
+        }
+    }
+
+    Ok(())
+}
 
 struct Lox {
     source: String,
@@ -80,7 +81,7 @@ impl Lox {
         let mut i8r = Interpreter::new(ast);
         let res = i8r.interpret();
 
-        println!("res: {:?}", res);
+        println!("Res: {:?}", res);
 
         Ok(())
     }

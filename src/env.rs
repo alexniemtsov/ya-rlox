@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{err::LoxError, interpreter::Value, scanner::Token};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Env {
     pub enclosing: Option<Box<Env>>,
     pub values: HashMap<String, Value>,
@@ -34,10 +34,13 @@ impl Env {
     }
 
     pub fn get(&self, name: &Token) -> Option<&Value> {
-        match &self.enclosing {
-            Some(outer) => outer.get(name),
-            None => self.values.get(&name.lexeme),
+        if self.values.contains_key(&name.lexeme) {
+            return self.values.get(&name.lexeme);
         }
+        if let Some(outer) = &self.enclosing {
+            return outer.get(name);
+        }
+        None
     }
 
     pub fn from_enclosing(outer: Env) -> Self {
