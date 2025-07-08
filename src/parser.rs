@@ -26,6 +26,11 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        args: Vec<Expr>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -231,7 +236,45 @@ impl Parser {
             };
             return Ok(expr);
         }
-        self.primary()
+
+        self.call()
+        //self.primary()
+    }
+
+    fn call(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.primary()?;
+        loop {
+            if self.matches(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> ParseResult<Expr> {
+        let mut args: Vec<Expr> = Vec::new();
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if args.len() >= 255 {
+                    return Err(LoxError::runtime_error(
+                        self.peek(),
+                        "Can't have more than 255 args.",
+                    ));
+                }
+                args.push(self.expression()?);
+                if !self.matches(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+        let paren = self.consume(&TokenType::RightParen, "Expect ')' after arguments.")?;
+        Ok(Expr::Call {
+            callee: Box::new(callee),
+            paren: paren.to_owned(),
+            args,
+        })
     }
 
     fn or(&mut self) -> ParseResult<Expr> {

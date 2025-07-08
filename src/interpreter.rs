@@ -11,6 +11,8 @@ pub enum Value {
     Number(f64),
     Bool(bool),
     Str(String),
+
+    Callable(Vec<Value>),
 }
 
 impl Default for Value {
@@ -26,6 +28,7 @@ impl Value {
             Self::Number(_) => true,
             Self::Str(s) => s.is_empty(),
             Self::Bool(b) => b == &true,
+            Self::Callable(_) => true,
         }
     }
     fn is_equal(&self, v: &Value) -> bool {
@@ -50,6 +53,7 @@ impl Value {
             Self::Number(n) => n.to_string(),
             Self::Bool(b) => b.to_string(),
             Self::Str(s) => s.clone(),
+            Self::Callable(_) => "Callable".to_string(),
         }
     }
 }
@@ -60,7 +64,7 @@ pub struct Interpreter {
     env: Env,
 }
 
-enum ControlFlow {
+pub enum ControlFlow {
     None,
     Break(usize),
 }
@@ -107,12 +111,16 @@ impl Interpreter {
             }
             Stmt::Block { stmts } => {
                 self.env.push_scope();
+                let mut out = ControlFlow::None;
                 for stmt in stmts {
-                    self.execute(&stmt)?;
+                    out = self.execute(&stmt)?;
+                    if !matches!(out, ControlFlow::None) {
+                        break;
+                    }
                 }
                 self.env.pop_scope();
 
-                Ok(ControlFlow::None)
+                Ok(out)
             }
 
             Stmt::Print(expr) => {
@@ -132,13 +140,14 @@ impl Interpreter {
                 then_br,
                 else_br,
             } => {
+                let mut out = ControlFlow::None;
                 if self.evaluate(cond)?.is_truthy() {
-                    _ = self.execute(&then_br);
+                    out = self.execute(&then_br)?;
                 } else if let Some(el) = else_br {
-                    _ = self.execute(el);
+                    out = self.execute(el)?;
                 }
 
-                Ok(ControlFlow::None)
+                Ok(out)
             }
             Stmt::While { cond, body } => {
                 while self.evaluate(cond)?.is_truthy() {
@@ -291,6 +300,14 @@ impl Interpreter {
                     }
                 }
                 return Ok(self.evaluate(&right)?);
+            }
+            Expr::Call {
+                callee,
+                paren,
+                args,
+            } => {
+                // todo: implement Callable
+                Ok(Value::Nil)
             }
         }
     }
