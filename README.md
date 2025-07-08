@@ -1,8 +1,10 @@
-yet Another Rust Lox compiler
+Yet Another Rust Lox interpreter (First) 
 
-todo: Workflow:
+Implementation of First Lox language interpreter from book:
+https://craftinginterpreters.com
+
 Language specs: 
-  Dynamic types: bool, num (double-precigion floating point also prepresenting Int), array, string (array of chars, declared with double quites), object, nil
+  Dynamic types: bool, num (double-precigion floating point also prepresenting Int), array, string (array of chars, declared with double quotes), object, nil
   Expressions (produce a Value): 
       Arithmetic: Binary operators, (in/pre/post)fix and with with numbers, except "+" that can be used to concat str
       Comparison + Equality: a < b, a > b, a <= b, a >= b, a == b, a != b
@@ -11,14 +13,14 @@ Language specs:
         is ignored.
       Bitwise operations: declared by keywords `AND, OR, NOR, XOR`
 
-      Precedence and groupping: Round brackets `()`
+      Precedence and grouping: Round brackets `()`
 
   Statements (produce Effect: modify state, read input, produce output) e.g. `print`
       Semicolon promotes expression to statement
 
   Scoping: `{}` curly brackets (packs a series of statements is a single one)
 
-  Variables: declared with `var` statement, if initializer is ommited the value defaults to
+  Variables: declared with `var` statement, if initializer is omitted the value defaults to
   `nil`. Once declared it can be accessed and mutated with-in the scope.
 
   Control Flow:
@@ -34,7 +36,7 @@ Language specs:
       Arguments are passed into the functions, parameters (formals) are declared inside it.
 
       Body of the function is always a block `{}` and optionally can `return value`.
-      If exectuion reaches the end of the block without hitting return statement - `nil` wil be
+      If execution reaches the end of the block without hitting return statement - `nil` will be
       returned
 
   Closures: functions that keep references to any variables used inside so they stay when
