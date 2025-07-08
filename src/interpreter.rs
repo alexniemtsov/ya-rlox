@@ -80,14 +80,17 @@ impl Interpreter {
         match statement {
             Stmt::Var { name, init } => {
                 let value = match init {
-                    Some(expr) => Some(self.evaluate(expr)?),
-                    None => None,
+                    Some(expr) => self.evaluate(expr)?,
+                    None => Value::Nil,
                 };
                 self.env.define(name.lexeme.clone(), value);
             }
             Stmt::Block { stmts } => {
-                let nested = Env::from_enclosing(self.env.clone());
-                self.execute_block(stmts.clone(), nested)?;
+                self.env.push_scope();
+                for stmt in stmts {
+                    self.execute(&stmt)?;
+                }
+                self.env.pop_scope();
             }
 
             Stmt::Print(expr) => {
@@ -109,18 +112,14 @@ impl Interpreter {
                     _ = self.execute(el);
                 }
             }
+            Stmt::While { cond, body } => {
+                while self.evaluate(cond)?.is_truthy() {
+                    self.execute(body);
+                }
+            }
 
             _ => unimplemented!("Not yet {:?}", statement),
         }
-        Ok(())
-    }
-
-    fn execute_block(&mut self, statements: Vec<Stmt>, mut new_env: Env) -> Result<(), LoxError> {
-        std::mem::swap(&mut self.env, &mut new_env);
-        for stmt in statements {
-            self.execute(&stmt)?;
-        }
-        std::mem::swap(&mut self.env, &mut new_env);
         Ok(())
     }
 

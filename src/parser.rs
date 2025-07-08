@@ -354,6 +354,14 @@ impl Parser {
             return self.print_statement();
         }
 
+        if self.matches(&[TokenType::While]) {
+            return self.while_statement();
+        }
+
+        if self.matches(&[TokenType::For]) {
+            return self.for_statement();
+        }
+
         if self.matches(&[TokenType::LeftBrace]) {
             return Stmt::Block {
                 stmts: self.block(),
@@ -361,6 +369,69 @@ impl Parser {
         }
 
         return self.expression_statement();
+    }
+
+    fn while_statement(&mut self) -> Stmt {
+        _ = self.consume(&TokenType::LeftParen, "Expect '(' after 'while'");
+        let cond = self.expression().unwrap();
+        _ = self.consume(&TokenType::RightParen, "Expect ')' after while condition");
+
+        let body = self.statement();
+
+        Stmt::While {
+            cond: cond,
+            body: Box::new(body),
+        }
+    }
+
+    fn for_statement(&mut self) -> Stmt {
+        _ = self.consume(&TokenType::LeftParen, "Expect '(' after 'for'.");
+        let initializer = if self.matches(&[TokenType::Semicolon]) {
+            None
+        } else if self.matches(&[TokenType::Var]) {
+            Some(self.var_declaration())
+        } else {
+            Some(self.expression_statement())
+        };
+
+        let cond = if !self.check(&TokenType::Semicolon) {
+            self.expression().expect("Expect loop condition.")
+        } else {
+            Expr::Literal(Literal::Boolean(true))
+        };
+        _ = self.consume(&TokenType::Semicolon, "Expect ';' after loop condition.");
+
+        let increment = if !self.check(&TokenType::RightParen) {
+            Some(self.expression().expect("Expect increment expression"))
+        } else {
+            None
+        };
+        _ = self.consume(&TokenType::RightParen, "Expect ')' after loop condition.");
+
+        let mut body = self.statement();
+        if let Some(inc) = increment {
+            body = match body {
+                Stmt::Block { mut stmts } => {
+                    stmts.push(Stmt::Expression(inc));
+                    Stmt::Block { stmts }
+                }
+                other => Stmt::Block {
+                    stmts: vec![other, Stmt::Expression(inc)],
+                },
+            }
+        }
+
+        body = Stmt::While {
+            cond,
+            body: Box::new(body),
+        };
+
+        if let Some(init) = initializer {
+            body = Stmt::Block {
+                stmts: vec![init, body],
+            };
+        }
+        body
     }
 
     fn if_statement(&mut self) -> Stmt {
