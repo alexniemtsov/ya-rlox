@@ -53,6 +53,8 @@ pub enum Stmt {
         params: Vec<Token>,
         body: Vec<Stmt>,
     },
+
+    Break(Option<Expr>),
 }
 
 #[derive(Debug)]
@@ -354,6 +356,10 @@ impl Parser {
             return self.print_statement();
         }
 
+        if self.matches(&[TokenType::Break]) {
+            return self.break_statement();
+        }
+
         if self.matches(&[TokenType::While]) {
             return self.while_statement();
         }
@@ -369,6 +375,17 @@ impl Parser {
         }
 
         return self.expression_statement();
+    }
+
+    fn break_statement(&mut self) -> Stmt {
+        let value = if self.matches(&[TokenType::Number]) {
+            let value = self.expression().unwrap();
+            Some(value)
+        } else {
+            None
+        };
+        _ = self.consume(&TokenType::Semicolon, "Expect ';' after break.");
+        Stmt::Break(value)
     }
 
     fn while_statement(&mut self) -> Stmt {

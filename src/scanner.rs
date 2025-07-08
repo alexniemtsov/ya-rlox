@@ -47,6 +47,7 @@ pub enum TokenType {
     True,
     Var,
     While,
+    Break,
 
     Eof,
 }
@@ -306,6 +307,7 @@ impl Scanner {
             "this" => Some(TokenType::This),
             "true" => Some(TokenType::True),
             "var" => Some(TokenType::Var),
+            "break" => Some(TokenType::Break),
             _ => None,
         }
     }

@@ -60,6 +60,14 @@ pub struct Interpreter {
     env: Env,
 }
 
+enum ControlFlow {
+    None,
+    Break(usize),
+}
+
+pub type RuntimeError = LoxError;
+pub type ExecResult = Result<ControlFlow, RuntimeError>;
+
 impl Interpreter {
     pub fn new(ast: Vec<Stmt>) -> Self {
         Self {
@@ -76,14 +84,26 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn execute(&mut self, statement: &Stmt) -> Result<(), LoxError> {
+    pub fn execute(&mut self, statement: &Stmt) -> ExecResult {
         match statement {
+            Stmt::Break(e) => {
+                let n = if let Some(expr) = e {
+                    match self.evaluate(expr)? {
+                        Value::Number(num) => num as usize,
+                        _ => unimplemented!("Autocast to integer"),
+                    }
+                } else {
+                    1_usize // Default 1 Loop
+                };
+                Ok(ControlFlow::Break(n))
+            }
             Stmt::Var { name, init } => {
                 let value = match init {
                     Some(expr) => self.evaluate(expr)?,
                     None => Value::Nil,
                 };
                 self.env.define(name.lexeme.clone(), value);
+                Ok(ControlFlow::None)
             }
             Stmt::Block { stmts } => {
                 self.env.push_scope();
@@ -91,15 +111,21 @@ impl Interpreter {
                     self.execute(&stmt)?;
                 }
                 self.env.pop_scope();
+
+                Ok(ControlFlow::None)
             }
 
             Stmt::Print(expr) => {
                 let value = self.evaluate(expr);
                 println!("Print: {:?}", value);
+
+                Ok(ControlFlow::None)
             }
             Stmt::Expression(expr) => {
                 let value = self.evaluate(expr);
                 println!("expression {:?}", expr);
+
+                Ok(ControlFlow::None)
             }
             Stmt::If {
                 cond,
@@ -111,16 +137,24 @@ impl Interpreter {
                 } else if let Some(el) = else_br {
                     _ = self.execute(el);
                 }
+
+                Ok(ControlFlow::None)
             }
             Stmt::While { cond, body } => {
                 while self.evaluate(cond)?.is_truthy() {
-                    self.execute(body);
+                    match self.execute(body)? {
+                        ControlFlow::None => {}
+                        ControlFlow::Break(1) => {
+                            break;
+                        }
+                        ControlFlow::Break(n) => return Ok(ControlFlow::Break(n - 1)),
+                    }
                 }
+                Ok(ControlFlow::None)
             }
 
             _ => unimplemented!("Not yet {:?}", statement),
         }
-        Ok(())
     }
 
     pub fn ast(&self) -> &[Stmt] {
