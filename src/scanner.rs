@@ -256,7 +256,26 @@ impl Scanner {
         while self.peek().is_alphanumeric() {
             self.advance();
         }
-        let token = self.keyword_to_token(&self._source[self._start..self._current]);
+        let token = match &self._source[self._start..self._current] {
+            "and" => Some(TokenType::And),
+            "class" => Some(TokenType::Class),
+            "else" => Some(TokenType::Else),
+            "false" => Some(TokenType::False),
+            "for" => Some(TokenType::For),
+            "fun" => Some(TokenType::Fun),
+            "if" => Some(TokenType::If),
+            "nil" => Some(TokenType::Nil),
+            "while" => Some(TokenType::While),
+            "or" => Some(TokenType::Or),
+            "print" => Some(TokenType::Print),
+            "return" => Some(TokenType::Return),
+            "super" => Some(TokenType::Super),
+            "this" => Some(TokenType::This),
+            "true" => Some(TokenType::True),
+            "var" => Some(TokenType::Var),
+            "break" => Some(TokenType::Break),
+            _ => None,
+        };
 
         match token {
             Some(t) => self.add_token(t),
@@ -285,30 +304,6 @@ impl Scanner {
             }
         } else {
             self.add_token(on_found);
-        }
-    }
-
-    // Todo: investigate about crate `phf`. Generates static hash maps at compile time.
-    fn keyword_to_token(&self, keyword: &str) -> Option<TokenType> {
-        match keyword {
-            "and" => Some(TokenType::And),
-            "class" => Some(TokenType::Class),
-            "else" => Some(TokenType::Else),
-            "false" => Some(TokenType::False),
-            "for" => Some(TokenType::For),
-            "fun" => Some(TokenType::Fun),
-            "if" => Some(TokenType::If),
-            "nil" => Some(TokenType::Nil),
-            "while" => Some(TokenType::While),
-            "or" => Some(TokenType::Or),
-            "print" => Some(TokenType::Print),
-            "return" => Some(TokenType::Return),
-            "super" => Some(TokenType::Super),
-            "this" => Some(TokenType::This),
-            "true" => Some(TokenType::True),
-            "var" => Some(TokenType::Var),
-            "break" => Some(TokenType::Break),
-            _ => None,
         }
     }
 }

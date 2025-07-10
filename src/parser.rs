@@ -115,14 +115,14 @@ impl Parser {
         }
     }
 
-    fn consume(&mut self, t: &TokenType, msg: &str) -> ParseResult<&Token> {
+    fn consume(&mut self, t: &TokenType, msg: impl Into<String>) -> ParseResult<&Token> {
         if self.check(t) {
             Ok(self.advance())
         } else {
             Err(LoxError {
                 line: 1,
                 where_: "Consume:UnknownError".to_string(),
-                msg: msg.to_string(),
+                msg: msg.into(),
             })
         }
     }
@@ -260,7 +260,7 @@ impl Parser {
                 if args.len() >= 255 {
                     return Err(LoxError::runtime_error(
                         self.peek(),
-                        "Can't have more than 255 args.",
+                        "Can't have more than 255 args.".to_string(),
                     ));
                 }
                 args.push(self.expression()?);
@@ -365,10 +365,33 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Stmt {
+        if self.matches(&[TokenType::Fun]) {
+            return self.fun_declaration();
+        }
         if self.matches(&[TokenType::Var]) {
             return self.var_declaration();
         }
         return self.statement();
+    }
+
+    fn fun_declaration(&mut self) -> Stmt {
+        let name = self
+            .consume(&TokenType::Identifier, "Expect function name.")
+            .unwrap()
+            .clone();
+        _ = self.consume(
+            &TokenType::LeftParen,
+            "Expect '(' after function declaration",
+        );
+
+        let args: Vec<Token> = Vec::new();
+        let stmts = self.block();
+
+        Stmt::Func {
+            name: name,
+            params: args,
+            body: stmts,
+        }
     }
 
     fn var_declaration(&mut self) -> Stmt {

@@ -1,4 +1,7 @@
+use std::rc::Rc;
+
 use crate::{
+    callable::{Callable, Clock, LoxClass, LoxFunction},
     env::Env,
     err::LoxError,
     parser::{Expr, Stmt},
@@ -12,7 +15,10 @@ pub enum Value {
     Bool(bool),
     Str(String),
 
-    Callable(Vec<Value>),
+    Function(Rc<LoxFunction>),
+    Class(Rc<LoxClass>),
+
+    Native(Rc<dyn Callable>),
 }
 
 impl Default for Value {
@@ -28,7 +34,9 @@ impl Value {
             Self::Number(_) => true,
             Self::Str(s) => s.is_empty(),
             Self::Bool(b) => b == &true,
-            Self::Callable(_) => true,
+            Self::Function(_) => true,
+            Self::Class(_) => true,
+            Self::Native(_) => true,
         }
     }
     fn is_equal(&self, v: &Value) -> bool {
@@ -53,7 +61,9 @@ impl Value {
             Self::Number(n) => n.to_string(),
             Self::Bool(b) => b.to_string(),
             Self::Str(s) => s.clone(),
-            Self::Callable(_) => "Callable".to_string(),
+            Self::Function(_) => "Function".to_string(),
+            Self::Native(_) => "Native function".to_string(),
+            Self::Class(_) => "Class".to_string(),
         }
     }
 }
@@ -61,6 +71,7 @@ impl Value {
 pub struct Interpreter {
     pub ast: Vec<Stmt>,
 
+    globals: Env,
     env: Env,
 }
 
@@ -74,10 +85,16 @@ pub type ExecResult = Result<ControlFlow, RuntimeError>;
 
 impl Interpreter {
     pub fn new(ast: Vec<Stmt>) -> Self {
-        Self {
-            ast,
-            env: Env::new(),
-        }
+        let globals = Env::new();
+        let env = globals.clone();
+
+        let mut interp = Self { ast, globals, env };
+
+        interp
+            .globals
+            .define("clock".to_string(), Value::Native(Rc::new(Clock)));
+
+        interp
     }
 
     pub fn interpret(mut self) -> Result<(), LoxError> {
@@ -306,8 +323,24 @@ impl Interpreter {
                 paren,
                 args,
             } => {
-                // todo: implement Callable
-                Ok(Value::Nil)
+                let e_callee = self.evaluate(callee)?;
+
+                let mut e_args: Vec<Value> = Vec::with_capacity(args.len());
+                for arg in args {
+                    e_args.push(self.evaluate(arg)?);
+                }
+                match e_callee {
+                    Value::Function(f) => {
+                        if e_args.len() != f.arity() {
+                            return Err(RuntimeError::at_token(
+                                paren,
+                                format!("Expected {} args but got {}.", f.arity(), e_args.len()),
+                            ));
+                        }
+                        return f.call(self, e_args);
+                    }
+                    _ => unimplemented!("Can only call functions and classes."),
+                }
             }
         }
     }
@@ -319,7 +352,7 @@ pub type RuntimeResult = Result<Value, LoxError>;
 
 impl LoxError {
     pub fn at_token(token: &Token, msg: impl Into<String>) -> Self {
-        LoxError::new(token.line, token.lexeme.clone(), msg)
+        LoxError::new(token.line, token.lexeme.clone(), msg.into().as_str())
     }
 }
 

@@ -29,7 +29,7 @@ impl LoxError {
         }
     }
 
-    pub fn runtime_error(token: &Token, msg: impl Into<String>) -> Self {
+    pub fn runtime_error(token: &Token, msg: String) -> Self {
         Self::new(token.line, token.lexeme.clone(), msg)
     }
 
