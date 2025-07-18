@@ -2,6 +2,9 @@
 
 **A fast, elegantly simple, yet powerful tree-walking interpreter for the Lox programming language.**
 
+## TODO
+- [ ] Implement OOP
+
 ---
 
 ## What is YA-RLOX?
