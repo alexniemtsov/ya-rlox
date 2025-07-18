@@ -4,6 +4,7 @@
 
 ## TODO
 - [ ] Implement OOP
+- [ ] Add STD
 
 ---
 
@@ -15,7 +16,7 @@ YA-RLOX is a complete, Turing-complete implementation of the Lox language from R
 
 ### Simple, Powerful
 
-Don't let the clean codebase fool you. YA-RLOX packs serious capabilities:
+Capabilities:
 - **Full Expression Evaluation**: Binary operations, unary operators, grouping, and literal values
 - **Dynamic Variables**: Declare, assign, and manipulate variables with ease
 - **Control Flow**: Conditional statements (`if/else`) and loops (`for`, `while`) with `break` support
