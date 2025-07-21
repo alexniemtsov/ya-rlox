@@ -1,5 +1,7 @@
 # 🚀 YA-RLOX: Yet Another Rust Lox Interpreter
 
+**The project is still in development**
+
 **A fast, elegantly simple, yet powerful tree-walking interpreter for the Lox programming language.**
 
 ## TODO
