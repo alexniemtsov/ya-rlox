@@ -5,6 +5,7 @@
 ## TODO
 - [ ] Implement OOP
 - [ ] Add STD
+- - [ ] `clock` functionality
 
 ---
 
@@ -12,32 +13,31 @@
 
 **Simple enough interpreter to understand in an afternoon. Powerful enough to run real programs.**
 
-YA-RLOX is a complete, Turing-complete implementation of the Lox language from Robert Nystrom's book "Crafting Interpreters" – built with the performance and safety of Rust. **~1,500 lines of code**, this interpreter delivers a surprisingly rich programming experience.
+YA-RLOX is a complete, Turing-complete implementation of the Lox language from Robert Nystrom's book "Crafting Interpreters"
 
 ### Simple, Powerful
 
 Capabilities:
 - **Full Expression Evaluation**: Binary operations, unary operators, grouping, and literal values
-- **Dynamic Variables**: Declare, assign, and manipulate variables with ease
+- **Dynamic Variables**: Declare, assign, and manipulate variables 
 - **Control Flow**: Conditional statements (`if/else`) and loops (`for`, `while`) with `break` support
 - **Functions**: First-class functions with closures and proper lexical scoping
-- **Built-in Functions**: Native functions like `clock()` for real-world utility
-- **Error Handling**: Comprehensive error reporting with meaningful messages
+- **Error Handling**: Error reporting with meaningful messages
 
 ### Architecture
 
 ```
 Scanner → Parser → Interpreter
    ↓        ↓         ↓
-Tokens → AST → Execution
+Tokens  →  AST   → Execution
 ```
 
 **Clean separation of concerns**:
 
-- **Scanner**: Tokenizes source code with precision
-- **Parser**: Builds Abstract Syntax Trees using recursive descent
-- **Interpreter**: Executes code with a tree-walking evaluator
-- **Environment**: Manages variable scoping and closures
+- **Scanner** `scanner.rs`: Tokenizes source code into array of Token 
+- **Parser** `parser.rs`: Builds Abstract Syntax Trees using recursive descent
+- **Interpreter** `interpreter.rs`: Executes code with a tree-walking evaluator
+- **Environment** `env.rs`: Manages variable scoping and closures
 
 ### Performance 
 
@@ -48,12 +48,12 @@ Tokens → AST → Execution
 
 ### Run a Lox Program
 ```bash
-cargo run -- examples/fibonacci.lox
+cargo run --bin=rlox test.lox
 ```
 
-### Interactive Mode
+### REPL
 ```bash
-cargo run
+cargo run --bin=rlox
 > print "Hello, Lox!";
 Hello, Lox!
 > var x = 42;
@@ -104,13 +104,10 @@ cargo build --release
 # Run a file
 ./target/release/rlox script.lox
 
-# Interactive mode
+# REPL
 ./target/release/rlox
 ```
 
 ## Why?
-**For Learning**: Perfect for understanding interpreter design and implementation
-**For Teaching**: Clean, well-structured code that's easy to follow and extend
+**For Learning**: Always wanted to try to implement my own interpreter
 **For Fun**: A complete programming language in your pocket
-
-**Built with ❤️ and Rust 🦀**
