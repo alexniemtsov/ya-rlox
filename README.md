@@ -47,15 +47,6 @@ Capabilities:
 - **Control Flow**: Conditional statements (`if/else`) and loops (`for`, `while`) with `break` support
 - **Functions**: First-class functions with closures and proper lexical scoping
 - **Error Handling**: Error reporting with meaningful messages
-
-### Architecture
-
-```
-Scanner → Parser → Interpreter
-   ↓        ↓         ↓
-Tokens  →  AST   → Execution
-```
-
 **Clean separation of concerns**:
 
 - **Scanner** `scanner.rs`: Tokenizes source code into array of Token 
