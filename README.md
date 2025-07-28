@@ -17,6 +17,28 @@
 
 YA-RLOX is a complete, Turing-complete implementation of the Lox language from Robert Nystrom's book "Crafting Interpreters"
 
+### 🧩 How it Works
+
+```mermaid
+sequenceDiagram
+    participant CLI as User / CLI
+    participant Lox as Lox driver
+    participant Sc as Scanner
+    participant Pa as Parser
+    participant In as Interpreter
+
+    CLI->>Lox: run(file or prompt line)
+    Lox->>Sc: new + scan_tokens(source)
+    Sc-->>Lox: Vec<Token>
+    Lox->>Pa: new + parse(tokens)
+    Pa-->>Lox: Vec<Stmt> (AST)
+    Lox->>In: new + interpret(ast)
+    loop for each Stmt
+        In->>In: execute(stmt) / evaluate(expr)
+    end
+    In-->>CLI: printed values / final result
+```
+
 ### Simple, Powerful
 
 Capabilities:
